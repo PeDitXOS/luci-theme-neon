@@ -12,7 +12,6 @@ env:
   FEED_NAME: neon_theme
   PACKAGE_NAME: luci-theme-neon
   PKG_VAR: luci_theme_neon
-
 jobs:
   build-ipk:
     name: Build IPK (24.10 SDK)
@@ -48,7 +47,7 @@ jobs:
           
           # Check package location
           echo "=== Feed packages ==="
-          ls -la feeds/${FEED_NAME}/ || true || echo "Feed dir not found"
+          ls -la feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Feed dir not found"
           ls -la package/feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Package not in feeds dir"
           
           # Configure - package is in package/feeds/neon_theme/luci-theme-neon
