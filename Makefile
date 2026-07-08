@@ -5,10 +5,11 @@
 
 include $(TOPDIR)/rules.mk
 
-LUCI_TITLE:=Neobird Theme
-LUCI_DEPENDS:=
+LUCI_TITLE:=Neon Theme
+LUCI_DEPENDS:=+luci-base
 PKG_VERSION:=2.0
 PKG_RELEASE:=202202260758
+PKG_MAINTAINER:=PeDitX
 
 include $(TOPDIR)/feeds/luci/luci.mk
 

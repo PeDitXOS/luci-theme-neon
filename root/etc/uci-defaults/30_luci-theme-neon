@@ -1,0 +1,8 @@
+#!/bin/sh
+uci batch <<-EOF
+	set luci.themes.Neon=/luci-static/neon
+	set luci.main.mediaurlbase=/luci-static/neon
+	commit luci
+EOF
+exit 0 
+# ↑↑↑ DO NOT EDIT THIS LINE

@@ -1,4 +1,4 @@
-# luci-theme-neobird
+# luci-theme-neon
 ## 针对移动端优化的 Openwrt 主题
 
 For Lean's OpenWRT Only
@@ -36,19 +36,19 @@ https://github.com/coolsnowwolf/lede
 * luci插件众多，不规范的插件可能会存在显示问题，不做保证
 
 ## 预览
-![macOS](https://github.com/thinktip/luci-theme-neobird/blob/main/preview/SCR-20220223-iw6.png)
-![macOS](https://github.com/thinktip/luci-theme-neobird/blob/main/preview/SCR-20220223-iwp.png)
-![macOS](https://github.com/thinktip/luci-theme-neobird/blob/main/preview/SCR-20220223-j1l.png)
-![iOS](https://github.com/thinktip/luci-theme-neobird/blob/main/preview/IMG_6478.PNG)
-![iOS](https://github.com/thinktip/luci-theme-neobird/blob/main/preview/IMG_6481.PNG)
-![iOS](https://github.com/thinktip/luci-theme-neobird/blob/main/preview/IMG_6474.PNG)
+![macOS](https://github.com/thinktip/luci-theme-neon/blob/main/preview/SCR-20220223-iw6.png)
+![macOS](https://github.com/thinktip/luci-theme-neon/blob/main/preview/SCR-20220223-iwp.png)
+![macOS](https://github.com/thinktip/luci-theme-neon/blob/main/preview/SCR-20220223-j1l.png)
+![iOS](https://github.com/thinktip/luci-theme-neon/blob/main/preview/IMG_6478.PNG)
+![iOS](https://github.com/thinktip/luci-theme-neon/blob/main/preview/IMG_6481.PNG)
+![iOS](https://github.com/thinktip/luci-theme-neon/blob/main/preview/IMG_6474.PNG)
 ## 自行编译：
 
 ```
 cd lede/package/lean  
-rm -rf luci-theme-neobird  
-git clone https://github.com/thinktip/luci-theme-neobird.git  
+rm -rf luci-theme-neon  
+git clone https://github.com/thinktip/luci-theme-neon.git  
 cd ~/lede/
-make menuconfig #choose LUCI->Theme->Luci-theme-neobird  
+make menuconfig #choose LUCI->Theme->Luci-theme-neon  
 make -j1 V=s
 ```

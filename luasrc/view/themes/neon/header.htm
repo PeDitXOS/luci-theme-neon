@@ -4,11 +4,11 @@
 	luci-theme-material
 	Copyright 2015 Lutty Yang <lutty@wcan.in>
 
-	luci-theme-neobird
+	luci-theme-neon
 	Copyright 2021 2smile <thinktip@gmail.com>
 
 	Have a bug? Please create an issue here on GitHub!
-	https://github.com/thinktip/luci-theme-neobird
+	https://github.com/thinktip/luci-theme-neon
 
 	luci-theme-bootstrap:
 	Copyright 2008 Steven Barth <steven@midlink.org>
@@ -162,7 +162,9 @@
 
 <div class="container">
 <span class="showSide"></span>
-		<img  src="<%=media%>/images/logo.png" <%=striptags( (boardinfo.hostname or "?") ) %>>
+						<img class="brand-logo" src="<%=media%>/images/brand.png" alt="PeDitX">
+						<span class="brand-text">PeDitX</span>
+						<img  src="<%=media%>/images/logo.png" <%=striptags( (boardinfo.hostname or "?" ) ) %>>
 
 		<div class="pull-right">
 		<%

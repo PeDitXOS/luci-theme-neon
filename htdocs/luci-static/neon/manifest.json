@@ -1,12 +1,12 @@
 {
-"name":"Neobird",
-"short_name":"Neobird",
-"description":"Neobird for OpenWRT by 2smile.",
+"name":"Neon",
+"short_name":"Neon",
+"description":"Neon for OpenWRT by PeDitX.",
 "start_url":"/",
 "scope": "/",
 "orientation":"portrait",
 "display":"standalone",
-"prompt_message":"在主屏幕添加图标，以便快速访问 Neobird",
+"prompt_message":"在主屏幕添加图标，以便快速访问 Neon",
 "icons":[
 {
 "src":"images/icon.png",

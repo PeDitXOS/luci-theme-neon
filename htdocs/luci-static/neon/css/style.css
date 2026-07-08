@@ -1,10 +1,10 @@
 /**
- *  Neobird is a clean HTML5 theme for LuCI. It is based on luci-theme-material
+ *  Neon is a clean HTML5 theme for LuCI. It is based on luci-theme-material
  *
  *  luci-theme-material
  *      Copyright 2015 Lutty Yang <lutty@wcan.in>
  * 
- *  luci-theme-Neobird
+ *  luci-theme-Neon
  *      Copyright 2021 2smile <thinktip@gmail.com>
  *
  *  Licensed to the public under the Apache License 2.0
@@ -42,8 +42,8 @@
     --progressbarColor: #c8c8c8;
     --progressbar: #51c291;
     --progressbartxtColor: #fff;
-    --logo: url('/luci-static/neobird/images/logo.png');
-    --mlogo: url('/luci-static/neobird/images/mlogo.png');
+    --logo: url('/luci-static/neon/images/logo.png');
+    --mlogo: url('/luci-static/neon/images/mlogo.png');
 }
 
 @media (prefers-color-scheme: dark) {
@@ -78,8 +78,8 @@
     --progressbarColor: #6d6d6d;
     --progressbar: #51c291;
     --progressbartxtColor: #fefefe;
-    --logo: url('/luci-static/neobird/images/logod.png');
-    --mlogo: url('/luci-static/neobird/images/mlogod.png');
+    --logo: url('/luci-static/neon/images/logod.png');
+    --mlogo: url('/luci-static/neon/images/mlogod.png');
   }
 }
 
@@ -2587,4 +2587,36 @@ body.lang_pl.node-main-login .cbi-value-title {
     #cbi-vssr-servers .cbi-page-actions {
         padding-bottom: 10px !important;
     }
+
+/* PeDitX brand logo - circular, animated */
+@keyframes brand-bounce {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25%      { transform: translateY(-6px) rotate(-8deg); }
+    50%      { transform: translateY(0) rotate(0deg); }
+    75%      { transform: translateY(-3px) rotate(8deg); }
+}
+
+.brand-logo {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 8px;
+    vertical-align: middle;
+    animation: brand-bounce 2.5s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(81, 194, 145, 0.6);
+    transition: box-shadow 0.3s ease;
+}
+
+.brand-logo:hover {
+    animation-play-state: paused;
+    box-shadow: 0 0 14px rgba(81, 194, 145, 0.9);
+}
+
+.brand-text {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: var(--activeColor, #51c291);
+    vertical-align: middle;
+    letter-spacing: 0.5px;
 }
