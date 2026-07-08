@@ -41,18 +41,13 @@ jobs:
       - name: Build IPK Package
         working-directory: ./sdk_ipk
         run: |
-          # Add theme as local feed
-          echo "src-git ${FEED_NAME} file://${GITHUB_WORKSPACE}/theme_repo" >> feeds.conf.default
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
-          
-          # Explicitly install our package to package/feeds/
-          ./scripts/feeds install ${PACKAGE_NAME}
+          # Add theme as local feed (but we'll copy directly to package/feeds/)
+          mkdir -p package/feeds/${FEED_NAME}
+          cp -r ${GITHUB_WORKSPACE}/theme_repo package/feeds/${FEED_NAME}/${PACKAGE_NAME}
           
           # Verify
           echo "=== Package location ==="
-          ls -la package/feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Not in package/feeds/"
-          ls -la feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Not in feeds/"
+          ls -la package/feeds/${FEED_NAME}/
           
           # Configure
           cat > .config <<EOF
@@ -113,18 +108,13 @@ jobs:
       - name: Build APK Package
         working-directory: ./sdk_apk
         run: |
-          # Add theme as local feed
-          echo "src-git ${FEED_NAME} file://${GITHUB_WORKSPACE}/theme_repo" >> feeds.conf.default
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
-          
-          # Explicitly install our package to package/feeds/
-          ./scripts/feeds install ${PACKAGE_NAME}
+          # Copy theme directly to package/feeds/ (bypasses feed system issues)
+          mkdir -p package/feeds/${FEED_NAME}
+          cp -r ${GITHUB_WORKSPACE}/theme_repo package/feeds/${FEED_NAME}/${PACKAGE_NAME}
           
           # Verify
           echo "=== Package location ==="
-          ls -la package/feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Not in package/feeds/"
-          ls -la feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Not in feeds/"
+          ls -la package/feeds/${FEED_NAME}/
           
           # Configure
           cat > .config <<EOF
