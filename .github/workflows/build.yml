@@ -140,7 +140,7 @@ jobs:
           files: artifacts/**/*
           generate_release_notes: true
           draft: false
-          prerelease: ${{ startsWith(github.ref, 'refs/tags/') == false }}
+          prerelease: ${{ startsWith(github.ref, 'refs/tags/') != 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
