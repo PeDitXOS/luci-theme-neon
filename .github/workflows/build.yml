@@ -81,7 +81,9 @@ jobs:
           
           # Collect artifacts
           mkdir -p ../artifacts/ipk
+          find bin/ -type f -name "${THEME_NAME}-*.ipk" -exec cp {} ../artifacts/ipk/ \; 2>/dev/null || true
           find bin/ -type f -name "${THEME_NAME}_*.ipk" -exec cp {} ../artifacts/ipk/ \; 2>/dev/null || true
+          find bin/ -type f -name "${PKG_VAR}-*.ipk" -exec cp {} ../artifacts/ipk/ \; 2>/dev/null || true
           find bin/ -type f -name "${PKG_VAR}_*.ipk" -exec cp {} ../artifacts/ipk/ \; 2>/dev/null || true
           echo "📦 IPK artifacts:"
           ls -la ../artifacts/ipk/ || true
@@ -121,7 +123,9 @@ jobs:
           
           # Collect artifacts
           mkdir -p ../artifacts/apk
+          find bin/ -type f -name "${THEME_NAME}-*.apk" -exec cp {} ../artifacts/apk/ \; 2>/dev/null || true
           find bin/ -type f -name "${THEME_NAME}_*.apk" -exec cp {} ../artifacts/apk/ \; 2>/dev/null || true
+          find bin/ -type f -name "${PKG_VAR}-*.apk" -exec cp {} ../artifacts/apk/ \; 2>/dev/null || true
           find bin/ -type f -name "${PKG_VAR}_*.apk" -exec cp {} ../artifacts/apk/ \; 2>/dev/null || true
           echo "📦 APK artifacts:"
           ls -la ../artifacts/apk/ || true
