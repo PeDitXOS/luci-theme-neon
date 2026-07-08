@@ -1,0 +1,156 @@
+name: Build luci-theme-neon
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      openwrt_version:
+        description: 'OpenWrt version to build'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - '21.02'
+          - '22.03'
+          - '23.05'
+          - '24.10'
+          - 'main'
+
+env:
+  FEED_NAME: peditxos
+  PACKAGE_NAME: luci-theme-neon
+
+jobs:
+  build:
+    name: Build ${{ matrix.openwrt_version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - openwrt_version: '21.02'
+            openwrt_ref: 'openwrt-21.02'
+            package_format: 'ipk'
+          - openwrt_version: '22.03'
+            openwrt_ref: 'openwrt-22.03'
+            package_format: 'ipk'
+          - openwrt_version: '23.05'
+            openwrt_ref: 'openwrt-23.05'
+            package_format: 'ipk'
+          - openwrt_version: '24.10'
+            openwrt_ref: 'openwrt-24.10'
+            package_format: 'ipk'
+          - openwrt_version: 'main'
+            openwrt_ref: 'main'
+            package_format: 'apk'
+    steps:
+      - name: Checkout theme
+        uses: actions/checkout@v4
+        with:
+          path: theme
+
+      - name: Checkout OpenWrt SDK
+        uses: actions/checkout@v4
+        with:
+          repository: openwrt/openwrt
+          ref: ${{ matrix.openwrt_ref }}
+          path: sdk
+          sparse-checkout: |
+            include
+            package
+            scripts
+            target
+            toolchain
+            feeds.conf.default
+            rules.mk
+          sparse-checkout-cone-mode: false
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses5-dev libssl-dev \
+            unzip subversion rsync git gawk flex gettext zlib1g-dev \
+            python3 python3-distutils python3-setuptools python3-pip \
+            ccache xsltproc wget curl file
+
+      - name: Setup SDK feeds
+        working-directory: ./sdk
+        run: |
+          # Update feeds.conf to add our theme
+          echo "src-git ${FEED_NAME} file://${GITHUB_WORKSPACE}/theme" >> feeds.conf.default
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Configure build
+        working-directory: ./sdk
+        run: |
+          cat > .config <<EOF
+          CONFIG_PACKAGE_${PACKAGE_NAME//-/_}=y
+          CONFIG_TARGET_x86_64=y
+          CONFIG_TARGET_x86_64_DEVICE_generic=y
+          CONFIG_DEVEL=y
+          CONFIG_CCACHE=y
+          EOF
+          make defconfig
+
+      - name: Build package
+        working-directory: ./sdk
+        run: |
+          make package/${PACKAGE_NAME}/compile V=s -j$(nproc)
+
+      - name: Find built packages
+        id: find_packages
+        working-directory: ./sdk
+        run: |
+          PKG_DIR=$(find bin -name "${PACKAGE_NAME}_*.${{ matrix.package_format }}" 2>/dev/null | head -5)
+          echo "packages<<EOF" >> $GITHUB_OUTPUT
+          echo "$PKG_DIR" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Upload artifacts (${{ matrix.openwrt_version }}-${{ matrix.package_format }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.openwrt_version }}-${{ matrix.package_format }}
+          path: |
+            sdk/bin/packages/*/${PACKAGE_NAME}_*.${{ matrix.package_format }}
+            sdk/bin/targets/*/*/packages/${PACKAGE_NAME}_*.${{ matrix.package_format }}
+          retention-days: 30
+
+      - name: Create release (on tag push)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            sdk/bin/packages/*/${PACKAGE_NAME}_*.${{ matrix.package_format }}
+            sdk/bin/targets/*/*/packages/${PACKAGE_NAME}_*.${{ matrix.package_format }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  summary:
+    name: Build Summary
+    needs: build
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | Format | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|--------|" >> $GITHUB_STEP_SUMMARY
+          ${{ toJson(needs.build.result) }}
+          # Note: Full matrix status would need job outputs
+          echo "| 21.02 | ipk | \${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 22.03 | ipk | \${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 23.05 | ipk | \${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 24.10 | ipk | \${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| main | apk | \${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
