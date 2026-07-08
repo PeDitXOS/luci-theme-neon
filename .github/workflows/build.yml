@@ -28,14 +28,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential libncurses5-dev gawk git gettext unzip \
-            zlib1g-dev file python3 curl wget zstd ca-certificates xz-utils
+            zlib1g-dev file python3 curl wget zstd ca-certificates
 
-      - name: Download OpenWrt 24.10.7 SDK
+      - name: Download OpenWrt 24.10.7 SDK (.zst)
         run: |
-          SDK_URL="https://downloads.openwrt.org/releases/24.10.7/targets/x86/64/openwrt-sdk-24.10.7-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.xz"
+          SDK_URL="https://downloads.openwrt.org/releases/24.10.7/targets/x86/64/openwrt-sdk-24.10.7-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
           echo "📥 Downloading SDK 24.10.7..."
-          wget -q "$SDK_URL" -O sdk_ipk.tar.xz
-          mkdir -p sdk_ipk && tar -xJf sdk_ipk.tar.xz -C sdk_ipk --strip-components=1
+          wget -q "$SDK_URL" -O sdk_ipk.tar.zst
+          mkdir -p sdk_ipk && tar --use-compress-program=unzstd -xf sdk_ipk.tar.zst -C sdk_ipk --strip-components=1
 
       - name: Build IPK Package
         working-directory: ./sdk_ipk
