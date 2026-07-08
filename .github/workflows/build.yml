@@ -17,7 +17,7 @@ env:
 
 jobs:
   build-and-release:
-    name: Build & Release ${{ env.THEME_NAME }}
+    name: Build & Release luci-theme-neon
     runs-on: ubuntu-latest
     timeout-minutes: 60
     
@@ -124,7 +124,7 @@ jobs:
         if: ${{ hashFiles('artifacts/**') != '' }}
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
-          name: "${{ env.THEME_NAME }} ${{ steps.get_version.outputs.version }}"
+          name: "luci-theme-neon ${{ steps.get_version.outputs.version }}"
           files: artifacts/**/*
           generate_release_notes: true
           draft: false
