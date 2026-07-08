@@ -55,34 +55,28 @@ jobs:
         with:
           path: theme
 
-      - name: Checkout OpenWrt SDK
+      - name: Checkout OpenWrt source
         uses: actions/checkout@v4
         with:
           repository: openwrt/openwrt
           ref: ${{ matrix.openwrt_ref }}
           path: sdk
-          sparse-checkout: |
-            include
-            package
-            scripts
-            target
-            toolchain
-            feeds.conf.default
-            rules.mk
-          sparse-checkout-cone-mode: false
 
-      - name: Install dependencies
+      - name: Install dependencies (Ubuntu 24.04 compatible)
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libncurses5-dev libssl-dev \
+          sudo apt-get install -y --no-install-recommends \
+            build-essential libncurses5-dev libssl-dev \
             unzip subversion rsync git gawk flex gettext zlib1g-dev \
-            python3 python3-distutils python3-setuptools python3-pip \
-            ccache xsltproc wget curl file
+            python3 python3-venv python3-dev python3-pip \
+            ccache xsltproc wget curl file \
+            libelf-dev liblzma-dev
+          # python3-distutils not available in Ubuntu 24.04, use python3-venv instead
 
       - name: Setup SDK feeds
         working-directory: ./sdk
         run: |
-          # Update feeds.conf to add our theme
+          # Update feeds.conf to add our theme as local feed
           echo "src-git ${FEED_NAME} file://${GITHUB_WORKSPACE}/theme" >> feeds.conf.default
           ./scripts/feeds update -a
           ./scripts/feeds install -a
@@ -98,22 +92,13 @@ jobs:
           CONFIG_CCACHE=y
           EOF
           make defconfig
-
       - name: Build package
         working-directory: ./sdk
         run: |
+          make defconfig
           make package/${PACKAGE_NAME}/compile V=s -j$(nproc)
 
-      - name: Find built packages
-        id: find_packages
-        working-directory: ./sdk
-        run: |
-          PKG_DIR=$(find bin -name "${PACKAGE_NAME}_*.${{ matrix.package_format }}" 2>/dev/null | head -5)
-          echo "packages<<EOF" >> $GITHUB_OUTPUT
-          echo "$PKG_DIR" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Upload artifacts (${{ matrix.openwrt_version }}-${{ matrix.package_format }})
+      - name: Find and upload artifacts (${{ matrix.openwrt_version }}-${{ matrix.package_format }})
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.openwrt_version }}-${{ matrix.package_format }}
@@ -147,10 +132,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Version | Format | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|--------|--------|" >> $GITHUB_STEP_SUMMARY
-          ${{ toJson(needs.build.result) }}
-          # Note: Full matrix status would need job outputs
-          echo "| 21.02 | ipk | \${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 22.03 | ipk | \${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 23.05 | ipk | \${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 24.10 | ipk | \${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| main | apk | \${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 21.02 | ipk | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 22.03 | ipk | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 23.05 | ipk | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 24.10 | ipk | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| main | apk | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
