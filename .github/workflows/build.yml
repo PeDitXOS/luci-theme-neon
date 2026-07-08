@@ -11,6 +11,7 @@ on:
 env:
   FEED_NAME: neon_theme
   PACKAGE_NAME: luci-theme-neon
+  PKG_VAR: luci_theme_neon
 
 jobs:
   build-ipk:
@@ -45,17 +46,22 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-          # Configure
+          # Check package location
+          echo "=== Feed packages ==="
+          ls -la feeds/${FEED_NAME}/ || true || echo "Feed dir not found"
+          ls -la package/feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Package not in feeds dir"
+          
+          # Configure - package is in package/feeds/neon_theme/luci-theme-neon
           cat > .config <<EOF
-          CONFIG_PACKAGE_${PACKAGE_NAME//-/_}=m
+          CONFIG_PACKAGE_${PKG_VAR}=m
           CONFIG_LUCI_JSMIN=n
           CONFIG_LUCI_CSSTIDY=n
           EOF
           make defconfig
           
-          # Build
+          # Build using correct path
           echo "🔨 Building IPK..."
-          make package/${PACKAGE_NAME}/compile -j$(nproc) V=s || true
+          make package/feeds/${FEED_NAME}/${PACKAGE_NAME}/compile -j$(nproc) V=s || true
           
           # Collect artifacts
           mkdir -p ../artifacts/ipk
@@ -108,17 +114,22 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
+          # Check package location
+          echo "=== Feed packages ==="
+          ls -la feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Feed dir not found"
+          ls -la package/feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Package not in feeds dir"
+          
           # Configure
           cat > .config <<EOF
-          CONFIG_PACKAGE_${PACKAGE_NAME//-/_}=m
+          CONFIG_PACKAGE_${PKG_VAR}=m
           CONFIG_LUCI_JSMIN=n
           CONFIG_LUCI_CSSTIDY=n
           EOF
           make defconfig
           
-          # Build
+          # Build using correct path
           echo "🔨 Building APK..."
-          make package/${PACKAGE_NAME}/compile -j$(nproc) V=s || true
+          make package/feeds/${FEED_NAME}/${PACKAGE_NAME}/compile -j$(nproc) V=s || true
           
           # Collect artifacts
           mkdir -p ../artifacts/apk
