@@ -1,4 +1,4 @@
-name: Build luci-theme-neon
+name: Build & Release luci-theme-neon
 
 on:
   push:
@@ -8,50 +8,64 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
-  FEED_NAME: neon_theme
-  PACKAGE_NAME: luci-theme-neon
+  TZ: Asia/Tehran
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  THEME_NAME: luci-theme-neon
   PKG_VAR: luci_theme_neon
+  SDK_IPK_URL: "https://downloads.openwrt.org/releases/24.10.7/targets/x86/64/openwrt-sdk-24.10.7-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+  SDK_APK_URL: "https://downloads.openwrt.org/releases/25.12.5/targets/x86/64/openwrt-sdk-25.12.5-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
+  SDK_APK_FALLBACK: "https://downloads.openwrt.org/snapshots/targets/x86/64/openwrt-sdk-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
 
 jobs:
-  build-ipk:
-    name: Build IPK (24.10 SDK)
+  build-and-release:
+    name: Build & Release ${{ env.THEME_NAME }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
+    
     steps:
-      - name: Checkout theme
+      - name: Checkout theme repo
         uses: actions/checkout@v4
         with:
           path: theme_repo
 
-      - name: Install dependencies
+      - name: Extract Version from Makefile
+        id: get_version
+        working-directory: ./theme_repo
+        run: |
+          VERSION=$(grep -E 'PKG_VERSION\s*:=\s*' Makefile | sed -E 's/PKG_VERSION\s*:=\s*//' | tr -d ' \n\r')
+          RELEASE=$(grep -E 'PKG_RELEASE\s*:=\s*' Makefile | sed -E 's/PKG_RELEASE\s*:=\s*//' | tr -d ' \n\r')
+          if [ -z "$VERSION" ]; then VERSION="2.0"; fi
+          if [ -z "$RELEASE" ]; then RELEASE="1"; fi
+          FULL_VERSION="${VERSION}-${RELEASE}"
+          echo "version=v${FULL_VERSION}" >> $GITHUB_OUTPUT
+          echo "🏷️ Detected Version: v${FULL_VERSION}"
+
+      - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential libncurses5-dev gawk git gettext unzip \
             zlib1g-dev file python3 curl wget zstd ca-certificates
 
-      - name: Download OpenWrt 24.10.7 SDK (.zst)
+      # ================= BUILD IPK (SDK 24.10) =================
+      - name: Build IPK Package (OpenWrt 24.10 SDK)
         run: |
-          SDK_URL="https://downloads.openwrt.org/releases/24.10.7/targets/x86/64/openwrt-sdk-24.10.7-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
-          echo "📥 Downloading SDK 24.10.7..."
-          wget -q "$SDK_URL" -O sdk_ipk.tar.zst
+          echo "📥 Downloading SDK 24.10..."
+          wget -q "${SDK_IPK_URL}" -O sdk_ipk.tar.zst
           mkdir -p sdk_ipk && tar --use-compress-program=unzstd -xf sdk_ipk.tar.zst -C sdk_ipk --strip-components=1
-
-      - name: Build IPK Package
-        working-directory: ./sdk_ipk
-        run: |
-          # Install luci feed (needed for luci.mk)
-          ./scripts/feeds update luci
-          ./scripts/feeds install luci
           
-          # Copy theme directly to package/feeds/
-          mkdir -p package/feeds/${FEED_NAME}
-          cp -r ${GITHUB_WORKSPACE}/theme_repo package/feeds/${FEED_NAME}/${PACKAGE_NAME}
+          cd sdk_ipk
+          # Update and install all feeds first
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
           
-          # Verify
-          echo "=== Package location ==="
-          ls -la package/feeds/${FEED_NAME}/
+          # Copy theme to package/ (direct, like peditx workflow)
+          mkdir -p package/${THEME_NAME}
+          cp -r ${GITHUB_WORKSPACE}/theme_repo/* package/${THEME_NAME}/
           
           # Configure
           cat > .config <<EOF
@@ -61,68 +75,37 @@ jobs:
           EOF
           make defconfig
           
-          # Build using correct path
+          # Build
           echo "🔨 Building IPK..."
-          make package/feeds/${FEED_NAME}/${PACKAGE_NAME}/compile -j$(nproc) V=s || true
+          make package/${THEME_NAME}/compile -j$(nproc) V=s || true
           
           # Collect artifacts
           mkdir -p ../artifacts/ipk
-          find bin/ -type f -name "${PACKAGE_NAME}_*.ipk" -exec cp {} ../artifacts/ipk/ \; 2>/dev/null || true
+          find bin/ -type f -name "${THEME_NAME}_*.ipk" -exec cp {} ../artifacts/ipk/ \; 2>/dev/null || true
           find bin/ -type f -name "${PKG_VAR}_*.ipk" -exec cp {} ../artifacts/ipk/ \; 2>/dev/null || true
           echo "📦 IPK artifacts:"
           ls -la ../artifacts/ipk/ || true
 
-      - name: Upload IPK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: 24.10-ipk
-          path: artifacts/ipk/*.ipk
-          retention-days: 30
-
-  build-apk:
-    name: Build APK (25.12 SDK / SNAPSHOT fallback)
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - name: Checkout theme
-        uses: actions/checkout@v4
-        with:
-          path: theme_repo
-
-      - name: Install dependencies
+      # ================= BUILD APK (SDK 25.12 / SNAPSHOT) =================
+      - name: Build APK Package (OpenWrt 25.12 SDK)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential libncurses5-dev gawk git gettext unzip \
-            zlib1g-dev file python3 curl wget zstd ca-certificates
-
-      - name: Download OpenWrt 25.12.5 SDK (or SNAPSHOT fallback)
-        run: |
-          SDK_URL="https://downloads.openwrt.org/releases/25.12.5/targets/x86/64/openwrt-sdk-25.12.5-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
-          echo "📥 Downloading SDK 25.12.5..."
-          if ! wget -q "$SDK_URL" -O sdk_apk.tar.zst 2>/dev/null; then
+          echo "📥 Downloading SDK 25.12..."
+          if ! wget -q "${SDK_APK_URL}" -O sdk_apk.tar.zst 2>/dev/null; then
             echo "⚠️ 25.12.5 not available, trying SNAPSHOT..."
-            SDK_URL="https://downloads.openwrt.org/snapshots/targets/x86/64/openwrt-sdk-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
-            wget -q "$SDK_URL" -O sdk_apk.tar.zst
+            wget -q "${SDK_APK_FALLBACK}" -O sdk_apk.tar.zst
           fi
           
           mkdir -p sdk_apk
           tar --use-compress-program=unzstd -xf sdk_apk.tar.zst -C sdk_apk --strip-components=1
-
-      - name: Build APK Package
-        working-directory: ./sdk_apk
-        run: |
-          # Install luci feed (needed for luci.mk)
-          ./scripts/feeds update luci
-          ./scripts/feeds install luci
           
-          # Copy theme directly to package/feeds/
-          mkdir -p package/feeds/${FEED_NAME}
-          cp -r ${GITHUB_WORKSPACE}/theme_repo package/feeds/${FEED_NAME}/${PACKAGE_NAME}
+          cd sdk_apk
+          # Update and install all feeds first
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
           
-          # Verify
-          echo "=== Package location ==="
-          ls -la package/feeds/${FEED_NAME}/
+          # Copy theme to package/ (direct, like peditx workflow)
+          mkdir -p package/${THEME_NAME}
+          cp -r ${GITHUB_WORKSPACE}/theme_repo/* package/${THEME_NAME}/
           
           # Configure
           cat > .config <<EOF
@@ -132,44 +115,41 @@ jobs:
           EOF
           make defconfig
           
-          # Build using correct path
+          # Build
           echo "🔨 Building APK..."
-          make package/feeds/${FEED_NAME}/${PACKAGE_NAME}/compile -j$(nproc) V=s || true
+          make package/${THEME_NAME}/compile -j$(nproc) V=s || true
           
           # Collect artifacts
           mkdir -p ../artifacts/apk
-          find bin/ -type f -name "${PACKAGE_NAME}_*.apk" -exec cp {} ../artifacts/apk/ \; 2>/dev/null || true
+          find bin/ -type f -name "${THEME_NAME}_*.apk" -exec cp {} ../artifacts/apk/ \; 2>/dev/null || true
           find bin/ -type f -name "${PKG_VAR}_*.apk" -exec cp {} ../artifacts/apk/ \; 2>/dev/null || true
           echo "📦 APK artifacts:"
           ls -la ../artifacts/apk/ || true
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+      # ================= RELEASE =================
+      - name: Create/Update Release
+        uses: softprops/action-gh-release@v2
+        if: ${{ hashFiles('artifacts/**') != '' }}
         with:
-          name: 25.12-apk
-          path: artifacts/apk/*.apk
-          retention-days: 30
-
-  release:
-    name: Create Release
-    needs: [build-ipk, build-apk]
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: "${{ env.PACKAGE_NAME }} ${{ github.ref_name }}"
+          tag_name: ${{ steps.get_version.outputs.version }}
+          name: "${{ env.THEME_NAME }} ${{ steps.get_version.outputs.version }}"
           files: artifacts/**/*
           generate_release_notes: true
           draft: false
-          prerelease: false
+          prerelease: ${{ startsWith(github.ref, 'refs/tags/') == false }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "## 📦 Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Format | Version | Files |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          IPK_COUNT=$(find artifacts/ipk -name "*.ipk" 2>/dev/null | wc -l)
+          APK_COUNT=$(find artifacts/apk -name "*.apk" 2>/dev/null | wc -l)
+          echo "| IPK (24.10) | ${{ steps.get_version.outputs.version }} | $IPK_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| APK (25.12/SNAPSHOT) | ${{ steps.get_version.outputs.version }} | $APK_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🎉 **Release:** ${{ steps.get_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "📁 **Artifacts uploaded to GitHub Release**" >> $GITHUB_STEP_SUMMARY
