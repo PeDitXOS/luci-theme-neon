@@ -41,7 +41,11 @@ jobs:
       - name: Build IPK Package
         working-directory: ./sdk_ipk
         run: |
-          # Add theme as local feed (but we'll copy directly to package/feeds/)
+          # Install luci feed (needed for luci.mk)
+          ./scripts/feeds update luci
+          ./scripts/feeds install luci
+          
+          # Copy theme directly to package/feeds/
           mkdir -p package/feeds/${FEED_NAME}
           cp -r ${GITHUB_WORKSPACE}/theme_repo package/feeds/${FEED_NAME}/${PACKAGE_NAME}
           
@@ -108,7 +112,11 @@ jobs:
       - name: Build APK Package
         working-directory: ./sdk_apk
         run: |
-          # Copy theme directly to package/feeds/ (bypasses feed system issues)
+          # Install luci feed (needed for luci.mk)
+          ./scripts/feeds update luci
+          ./scripts/feeds install luci
+          
+          # Copy theme directly to package/feeds/
           mkdir -p package/feeds/${FEED_NAME}
           cp -r ${GITHUB_WORKSPACE}/theme_repo package/feeds/${FEED_NAME}/${PACKAGE_NAME}
           
