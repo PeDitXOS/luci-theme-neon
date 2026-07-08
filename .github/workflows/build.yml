@@ -12,6 +12,7 @@ env:
   FEED_NAME: neon_theme
   PACKAGE_NAME: luci-theme-neon
   PKG_VAR: luci_theme_neon
+
 jobs:
   build-ipk:
     name: Build IPK (24.10 SDK)
@@ -45,12 +46,15 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-          # Check package location
-          echo "=== Feed packages ==="
-          ls -la feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Feed dir not found"
-          ls -la package/feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Package not in feeds dir"
+          # Explicitly install our package to package/feeds/
+          ./scripts/feeds install ${PACKAGE_NAME}
           
-          # Configure - package is in package/feeds/neon_theme/luci-theme-neon
+          # Verify
+          echo "=== Package location ==="
+          ls -la package/feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Not in package/feeds/"
+          ls -la feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Not in feeds/"
+          
+          # Configure
           cat > .config <<EOF
           CONFIG_PACKAGE_${PKG_VAR}=m
           CONFIG_LUCI_JSMIN=n
@@ -65,6 +69,7 @@ jobs:
           # Collect artifacts
           mkdir -p ../artifacts/ipk
           find bin/ -type f -name "${PACKAGE_NAME}_*.ipk" -exec cp {} ../artifacts/ipk/ \; 2>/dev/null || true
+          find bin/ -type f -name "${PKG_VAR}_*.ipk" -exec cp {} ../artifacts/ipk/ \; 2>/dev/null || true
           echo "📦 IPK artifacts:"
           ls -la ../artifacts/ipk/ || true
 
@@ -113,10 +118,13 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-          # Check package location
-          echo "=== Feed packages ==="
-          ls -la feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Feed dir not found"
-          ls -la package/feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Package not in feeds dir"
+          # Explicitly install our package to package/feeds/
+          ./scripts/feeds install ${PACKAGE_NAME}
+          
+          # Verify
+          echo "=== Package location ==="
+          ls -la package/feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Not in package/feeds/"
+          ls -la feeds/${FEED_NAME}/ 2>/dev/null | grep ${PACKAGE_NAME} || echo "Not in feeds/"
           
           # Configure
           cat > .config <<EOF
@@ -133,6 +141,7 @@ jobs:
           # Collect artifacts
           mkdir -p ../artifacts/apk
           find bin/ -type f -name "${PACKAGE_NAME}_*.apk" -exec cp {} ../artifacts/apk/ \; 2>/dev/null || true
+          find bin/ -type f -name "${PKG_VAR}_*.apk" -exec cp {} ../artifacts/apk/ \; 2>/dev/null || true
           echo "📦 APK artifacts:"
           ls -la ../artifacts/apk/ || true
 
