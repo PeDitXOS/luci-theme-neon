@@ -3,7 +3,7 @@
 
 	luci-theme-neon
 		Based on luci-theme-neobird by 2smile <thinktip@gmail.com>
-		Rebranded for PeDitXOS by PeDitX
+		Ported to ucode runtime for OpenWrt 24.10+ by PeDitX
 
 	luci-theme-bootstrap:
 		Copyright 2008 Steven Barth <steven@midlink.org>
