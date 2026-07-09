@@ -1,0 +1,8 @@
+	{% if (!blank_page): %}
+				</div>
+			</div>
+		</div>
+		<script>L.require('menu-neon')</script>
+	{% endif %}
+	</body>
+</html>

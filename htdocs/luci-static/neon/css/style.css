@@ -95,10 +95,8 @@
 }
 
 @font-face {
-  font-family: 'neobird';
-  src: url('');
-  src: url('?#iefix') format('embedded-opentype'),
-  url('../fonts/iconfont.woff2') format('woff2'),
+  font-family: 'neon';
+  src: url('../fonts/iconfont.woff2') format('woff2'),
   url('../fonts/iconfont.woff') format('woff'),
   url('../fonts/iconfont.ttf') format('truetype'),
   url('#iconfont') format('svg');
@@ -500,7 +498,7 @@ img[src*="/luci-static/resources/cbi/reload.gif"] {
 
 
 .myIcon{
-    font-family: "neobird" !important;
+    font-family: "neon" !important;
     font-style: normal !important;
     font-variant: normal !important;
     text-transform: none !important;
@@ -784,7 +782,7 @@ p#shadowsocksr_status {
     left:-10px;
     top: 1px;
     position: relative;
-    font-family: "neobird" !important;
+    font-family: "neon" !important;
     font-weight: bold !important;
     text-transform: none !important;
     speak: none;
@@ -902,7 +900,7 @@ p#shadowsocksr_status {
     padding: 8px 0px 8px 25px;
 }
 .main > .main-left > .nav > .slide > .slide-menu > li > a:after{
-    font-family: "neobird" !important;
+    font-family: "neon" !important;
     font-style: normal !important;
     font-variant: normal !important;
     content: "\eb03";
@@ -1844,7 +1842,7 @@ header > .container > .pull-right > * {
 
 #refresh_on, #refresh_off {
     font-size: 1.5rem;
-    font-family: neobird;
+    font-family: neon;
 }
 
 #refresh_on {
