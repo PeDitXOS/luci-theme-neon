@@ -15,15 +15,15 @@ PKG_MAINTAINER:=PeDitX
 
 include $(TOPDIR)/feeds/luci/luci.mk
 
-# Set the theme on install (uci-defaults only runs on first boot, not on opkg install)
+# Apply theme on install (postinst runs on every install, not just first boot)
 define Package/luci-theme-neon/postinst
 #!/bin/sh
 [ -n "$$IPKG_INSTROOT" ] || {
-	uci -q batch <<-EOF
-		set luci.themes.Neon=/luci-static/neon
-		set luci.main.mediaurlbase=/luci-static/neon
-		commit luci
-	EOF
+    uci -q batch <<-EOF
+        set luci.themes.Neon=/luci-static/neon
+        set luci.main.mediaurlbase=/luci-static/neon
+        commit luci
+EOF
 }
 exit 0
 endef

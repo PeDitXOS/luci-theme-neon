@@ -34,11 +34,16 @@
     local node = context.dispatched
     local categories = {}
 
-    local ok, tree_or_err = pcall(function() return disp.node() end)
-    if ok then tree = tree_or_err end
+    local function safe_dispatcher(fn, ...)
+        local ok, result = pcall(fn, ...)
+        return ok and result or nil
+    end
 
-    local ok2, cat_or_err = pcall(function() return disp.node_childs(tree) end)
-    if ok2 then categories = cat_or_err end
+    local ok, tree_result = pcall(function() return disp.node() end)
+    if ok then tree = tree_result or {} end
+
+    local ok2, cat_result = pcall(function() return disp.node_childs(tree) end)
+    if ok2 then categories = cat_result or {} end
 %>
 
                 </div>
@@ -50,7 +55,7 @@
                     <% if #categories > 1 then %>
                     <ul class="breadcrumb pull-right" id="modemenu">
                         <% for i, r in ipairs(categories) do %>
-                        <li<% if request[1] == r then %> class="active"<%end%>><a href="<%=controller%>/<%=r%>/"><%=striptags(translate(tree.nodes and tree.nodes[r] and tree.nodes[r].title or r))%></a> <span class="divider">|</span></li>
+                        <li<% if request[1] == r then %> class="active"<%end%>><a href="<%=controller%>/<%=r%>/"><%=striptags(i18n.translate(tree.nodes and tree.nodes[r] and tree.nodes[r].title or r))%></a> <span class="divider">|</span></li>
                         <% end %>
                     </ul>
                     <% end %>
