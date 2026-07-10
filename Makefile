@@ -6,7 +6,7 @@
 include $(TOPDIR)/rules.mk
 
 LUCI_TITLE:=Neon Theme
-LUCI_DEPENDS:=+luci-base
+LUCI_DEPENDS:=+luci-base +luci-mod-admin-full
 LUCI_PKGARCH:=all
 LUCI_THEMES:=neon
 PKG_VERSION:=2.0.4
@@ -26,6 +26,12 @@ define Package/luci-theme-neon/postinst
 EOF
 }
 exit 0
+endef
+
+# Install menu-neon.js to resources
+define Package/luci-theme-neon/install
+	$(INSTALL_DIR) $(1)/www/luci-static/resources
+	$(CP) $(PKG_BUILD_DIR)/htdocs/luci-static/resources/menu-neon.js $(1)/www/luci-static/resources/ 2>/dev/null || true
 endef
 
 # call BuildPackage - OpenWrt buildroot signature
