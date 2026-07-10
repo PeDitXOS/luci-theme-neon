@@ -29,10 +29,6 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   THEME_NAME: luci-theme-neon
   PKG_VAR: luci_theme_neon
-  SDK_23_URL: "https://downloads.openwrt.org/releases/23.05.5/targets/x86/64/openwrt-sdk-23.05.5-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.zst"
-  SDK_24_URL: "https://downloads.openwrt.org/releases/24.10.7/targets/x86/64/openwrt-sdk-24.10.7-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
-  SDK_25_URL: "https://downloads.openwrt.org/releases/25.05.0/targets/x86/64/openwrt-sdk-25.05.0-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
-  SDK_2512_URL: "https://downloads.openwrt.org/releases/25.12.0/targets/x86/64/openwrt-sdk-25.12.0-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
 
 jobs:
   build:
@@ -44,16 +40,16 @@ jobs:
       matrix:
         include:
           - openwrt_version: '23.05'
-            sdk_url: ${{ env.SDK_23_URL }}
+            sdk_url: "https://downloads.openwrt.org/releases/23.05.5/targets/x86/64/openwrt-sdk-23.05.5-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.zst"
             package_format: 'ipk'
           - openwrt_version: '24.10'
-            sdk_url: ${{ env.SDK_24_URL }}
+            sdk_url: "https://downloads.openwrt.org/releases/24.10.7/targets/x86/64/openwrt-sdk-24.10.7-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
             package_format: 'ipk'
           - openwrt_version: '25.05'
-            sdk_url: ${{ env.SDK_25_URL }}
+            sdk_url: "https://downloads.openwrt.org/releases/25.05.0/targets/x86/64/openwrt-sdk-25.05.0-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
             package_format: 'apk'
           - openwrt_version: '25.12'
-            sdk_url: ${{ env.SDK_2512_URL }}
+            sdk_url: "https://downloads.openwrt.org/releases/25.12.0/targets/x86/64/openwrt-sdk-25.12.0-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
             package_format: 'apk'
     steps:
       - name: Checkout theme repo
@@ -139,6 +135,7 @@ jobs:
           merge-multiple: true
 
       - name: Delete existing release (if exists)
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           gh release delete ${{ steps.get_version.outputs.version }} --yes || true
         env:
