@@ -60,11 +60,11 @@ jobs:
           mkdir -p sdk_ipk && tar --use-compress-program=unzstd -xf sdk_ipk.tar.zst -C sdk_ipk --strip-components=1
           
           cd sdk_ipk
-          # Update and install all feeds first
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
+          # Only update/install feeds we need (luci + base for luci-base dependency)
+          ./scripts/feeds update base luci
+          ./scripts/feeds install -a -p base -p luci
           
-          # Copy theme to package/ (direct, like peditx workflow)
+          # Copy theme to package/
           mkdir -p package/${THEME_NAME}
           cp -r ${GITHUB_WORKSPACE}/theme_repo/* package/${THEME_NAME}/
           
@@ -102,11 +102,11 @@ jobs:
           tar --use-compress-program=unzstd -xf sdk_apk.tar.zst -C sdk_apk --strip-components=1
           
           cd sdk_apk
-          # Update and install all feeds first
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
+          # Only update/install feeds we need (luci + base for luci-base dependency)
+          ./scripts/feeds update base luci
+          ./scripts/feeds install -a -p base -p luci
           
-          # Copy theme to package/ (direct, like peditx workflow)
+          # Copy theme to package/
           mkdir -p package/${THEME_NAME}
           cp -r ${GITHUB_WORKSPACE}/theme_repo/* package/${THEME_NAME}/
           
