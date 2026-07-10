@@ -7,6 +7,19 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'OpenWrt version to build'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - '23.05'
+          - '24.10'
+          - '25.05'
+          - '25.12'
+          - 'main'
 
 permissions:
   contents: write
@@ -16,16 +29,32 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   THEME_NAME: luci-theme-neon
   PKG_VAR: luci_theme_neon
-  SDK_IPK_URL: "https://downloads.openwrt.org/releases/24.10.7/targets/x86/64/openwrt-sdk-24.10.7-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
-  SDK_APK_URL: "https://downloads.openwrt.org/releases/25.12.5/targets/x86/64/openwrt-sdk-25.12.5-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
-  SDK_APK_FALLBACK: "https://downloads.openwrt.org/snapshots/targets/x86/64/openwrt-sdk-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
+  SDK_23_URL: "https://downloads.openwrt.org/releases/23.05.5/targets/x86/64/openwrt-sdk-23.05.5-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.zst"
+  SDK_24_URL: "https://downloads.openwrt.org/releases/24.10.7/targets/x86/64/openwrt-sdk-24.10.7-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
+  SDK_25_URL: "https://downloads.openwrt.org/releases/25.05.0/targets/x86/64/openwrt-sdk-25.05.0-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
+  SDK_2512_URL: "https://downloads.openwrt.org/releases/25.12.0/targets/x86/64/openwrt-sdk-25.12.0-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
 
 jobs:
-  build-and-release:
-    name: Build & Release luci-theme-neon
+  build:
+    name: Build ${{ matrix.openwrt_version }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
-    
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - openwrt_version: '23.05'
+            sdk_url: ${{ env.SDK_23_URL }}
+            package_format: 'ipk'
+          - openwrt_version: '24.10'
+            sdk_url: ${{ env.SDK_24_URL }}
+            package_format: 'ipk'
+          - openwrt_version: '25.05'
+            sdk_url: ${{ env.SDK_25_URL }}
+            package_format: 'apk'
+          - openwrt_version: '25.12'
+            sdk_url: ${{ env.SDK_2512_URL }}
+            package_format: 'apk'
     steps:
       - name: Checkout theme repo
         uses: actions/checkout@v4
@@ -52,14 +81,15 @@ jobs:
             build-essential libncurses5-dev gawk git gettext unzip \
             zlib1g-dev file python3 curl wget zstd ca-certificates
 
-      # ================= BUILD IPK (SDK 24.10) =================
-      - name: Build IPK Package (OpenWrt 24.10 SDK)
+      - name: Download OpenWrt SDK
         run: |
-          echo "📥 Downloading SDK 24.10..."
-          wget -q "${SDK_IPK_URL}" -O sdk_ipk.tar.zst
-          mkdir -p sdk_ipk && tar --use-compress-program=unzstd -xf sdk_ipk.tar.zst -C sdk_ipk --strip-components=1
-          
-          cd sdk_ipk
+          echo "📥 Downloading SDK ${{ matrix.openwrt_version }}..."
+          wget -q "${{ matrix.sdk_url }}" -O sdk_${{ matrix.package_format }}.tar.zst
+          mkdir -p sdk_${{ matrix.package_format }} && tar --use-compress-program=unzstd -xf sdk_${{ matrix.package_format }}.tar.zst -C sdk_${{ matrix.package_format }} --strip-components=1
+
+      - name: Build Package
+        working-directory: ./sdk_${{ matrix.package_format }}
+        run: |
           # Only update/install feeds we need (luci + base for luci-base dependency)
           ./scripts/feeds update base luci
           ./scripts/feeds install -a -p base -p luci
@@ -77,63 +107,38 @@ jobs:
           make defconfig
           
           # Build
-          echo "🔨 Building IPK..."
+          echo "🔨 Building ${{ matrix.package_format }} for ${{ matrix.openwrt_version }}..."
           make package/${THEME_NAME}/compile -j$(nproc) V=s || true
           
           # Collect artifacts
-          mkdir -p ../artifacts/ipk
-          find bin/ -type f -name "${THEME_NAME}-*.ipk" -exec cp {} ../artifacts/ipk/ \; 2>/dev/null || true
-          find bin/ -type f -name "${THEME_NAME}_*.ipk" -exec cp {} ../artifacts/ipk/ \; 2>/dev/null || true
-          find bin/ -type f -name "${PKG_VAR}-*.ipk" -exec cp {} ../artifacts/ipk/ \; 2>/dev/null || true
-          find bin/ -type f -name "${PKG_VAR}_*.ipk" -exec cp {} ../artifacts/ipk/ \; 2>/dev/null || true
-          echo "📦 IPK artifacts:"
-          ls -la ../artifacts/ipk/ || true
+          mkdir -p ../artifacts/${{ matrix.package_format }}
+          find bin/ -type f -name "${THEME_NAME}-*.${{ matrix.package_format }}" -exec cp {} ../artifacts/${{ matrix.package_format }}/ \; 2>/dev/null || true
+          find bin/ -type f -name "${THEME_NAME}_*.${{ matrix.package_format }}" -exec cp {} ../artifacts/${{ matrix.package_format }}/ \; 2>/dev/null || true
+          find bin/ -type f -name "${PKG_VAR}-*.${{ matrix.package_format }}" -exec cp {} ../artifacts/${{ matrix.package_format }}/ \; 2>/dev/null || true
+          find bin/ -type f -name "${PKG_VAR}_*.${{ matrix.package_format }}" -exec cp {} ../artifacts/${{ matrix.package_format }}/ \; 2>/dev/null || true
+          echo "📦 ${{ matrix.package_format }} artifacts for ${{ matrix.openwrt_version }}:"
+          ls -la ../artifacts/${{ matrix.package_format }}/ || true
 
-      # ================= BUILD APK (SDK 25.12 / SNAPSHOT) =================
-      - name: Build APK Package (OpenWrt 25.12 SDK)
-        run: |
-          echo "📥 Downloading SDK 25.12..."
-          if ! wget -q "${SDK_APK_URL}" -O sdk_apk.tar.zst 2>/dev/null; then
-            echo "⚠️ 25.12.5 not available, trying SNAPSHOT..."
-            wget -q "${SDK_APK_FALLBACK}" -O sdk_apk.tar.zst
-          fi
-          
-          mkdir -p sdk_apk
-          tar --use-compress-program=unzstd -xf sdk_apk.tar.zst -C sdk_apk --strip-components=1
-          
-          cd sdk_apk
-          # Only update/install feeds we need (luci + base for luci-base dependency)
-          ./scripts/feeds update base luci
-          ./scripts/feeds install -a -p base -p luci
-          
-          # Copy theme to package/
-          mkdir -p package/${THEME_NAME}
-          cp -r ${GITHUB_WORKSPACE}/theme_repo/* package/${THEME_NAME}/
-          
-          # Configure
-          cat > .config <<EOF
-          CONFIG_PACKAGE_${PKG_VAR}=m
-          CONFIG_LUCI_JSMIN=n
-          CONFIG_LUCI_CSSTIDY=n
-          EOF
-          make defconfig
-          
-          # Build
-          echo "🔨 Building APK..."
-          make package/${THEME_NAME}/compile -j$(nproc) V=s || true
-          
-          # Collect artifacts
-          mkdir -p ../artifacts/apk
-          find bin/ -type f -name "${THEME_NAME}-*.apk" -exec cp {} ../artifacts/apk/ \; 2>/dev/null || true
-          find bin/ -type f -name "${THEME_NAME}_*.apk" -exec cp {} ../artifacts/apk/ \; 2>/dev/null || true
-          find bin/ -type f -name "${PKG_VAR}-*.apk" -exec cp {} ../artifacts/apk/ \; 2>/dev/null || true
-          find bin/ -type f -name "${PKG_VAR}_*.apk" -exec cp {} ../artifacts/apk/ \; 2>/dev/null || true
-          echo "📦 APK artifacts:"
-          ls -la ../artifacts/apk/ || true
+      - name: Upload ${{ matrix.package_format }} artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.openwrt_version }}-${{ matrix.package_format }}
+          path: artifacts/${{ matrix.package_format }}/*.${{ matrix.package_format }}
+          retention-days: 30
 
-      # ================= RELEASE =================
+  release:
+    name: Create Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
       - name: Delete existing release (if exists)
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
           gh release delete ${{ steps.get_version.outputs.version }} --yes || true
         env:
@@ -141,27 +146,12 @@ jobs:
 
       - name: Create/Update Release
         uses: softprops/action-gh-release@v2
-        if: ${{ hashFiles('artifacts/**') != '' }}
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
           name: "luci-theme-neon ${{ steps.get_version.outputs.version }}"
           files: artifacts/**/*
           generate_release_notes: true
           draft: false
-          prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Summary
-        run: |
-          echo "## 📦 Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Format | Version | Files |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|---------|-------|" >> $GITHUB_STEP_SUMMARY
-          IPK_COUNT=$(find artifacts/ipk -name "*.ipk" 2>/dev/null | wc -l)
-          APK_COUNT=$(find artifacts/apk -name "*.apk" 2>/dev/null | wc -l)
-          echo "| IPK (24.10) | ${{ steps.get_version.outputs.version }} | $IPK_COUNT |" >> $GITHUB_STEP_SUMMARY
-          echo "| APK (25.12/SNAPSHOT) | ${{ steps.get_version.outputs.version }} | $APK_COUNT |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🎉 **Release:** ${{ steps.get_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "📁 **Artifacts uploaded to GitHub Release**" >> $GITHUB_STEP_SUMMARY
