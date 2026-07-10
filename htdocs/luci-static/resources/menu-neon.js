@@ -69,7 +69,7 @@ return baseclass.extend({
           url + "/" + children[i].name,
           l
         ),
-      hasChildren = submenu.children.length;
+        hasChildren = submenu.children.length;
       ul.appendChild(
         E(
           "li",
@@ -124,7 +124,7 @@ return baseclass.extend({
               href: L.url(children[i].name),
               class: isActive ? "active" : null,
             },
-            [_(children[i].title)]
+            [_(children[i].title)],
           ),
         ])
       );
