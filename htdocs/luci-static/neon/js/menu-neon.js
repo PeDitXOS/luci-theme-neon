@@ -132,11 +132,10 @@ return baseclass.extend({
 			ul.appendChild(E('li', { 'class': className }, [
 				E('a', { 'href': L.url(url, child.name) }, [
 					_(child.title)
-				])
+				]),
 			]));
 
-			if (isActive)
-				activeNode = child;
+			if (isActive) activeNode = child;
 		});
 
 		if (ul.children.length == 0)
