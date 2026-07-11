@@ -13,6 +13,7 @@ return baseclass.extend({
 
 		this.renderMainMenu(tree, '');
 
+		// Render tab menu when we have enough dispatch path depth
 		if (L.env.dispatchpath.length >= 3) {
 			for (var i = 0; i < 3 && node; i++) {
 				node = node.children[L.env.dispatchpath[i]];
