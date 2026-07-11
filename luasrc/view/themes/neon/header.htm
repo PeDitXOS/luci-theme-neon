@@ -144,6 +144,7 @@
         </style>
     <% end -%>
     <script src="<%=resource%>/xhr.js?<%= ver.luciversion %>"></script>
+	<script src="<%=media%>/menu-neon.js?v=2.0.8"></script>
 </head>
 
 <body class="lang_<%=luci.i18n.context.lang%> <%- if node then %><%= striptags( node.title ) %><%- end %> <% if luci.dispatcher.context.authsession then %>logged-in<% end %>">
@@ -163,7 +164,9 @@
         <img class="brand-logo" src="<%=media%>/images/brand.png" alt="PeDitX">
         <span class="brand-text">PeDitX</span>
         <img  src="<%=media%>/images/logo.png" <%=striptags( hostname or "?" )%>>
-
+        <div class="modemenu-buttons" style="display:none">
+            <ul id="modemenu"></ul>
+        </div>
         <div class="pull-right">
         <%
         -- calculate the number of unsaved changes

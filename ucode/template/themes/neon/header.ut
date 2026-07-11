@@ -46,8 +46,9 @@
 		<link rel="stylesheet" href="{{ resource }}/{{ node.css }}">
 		{% endif %}
 		<script src="{{ dispatcher.build_url('admin/translations', dispatcher.lang) }}"></script>
-		<script src="{{ resource }}/cbi.js"></script>
-		<script src="{{ media }}/menu-neon.js"></script>
+				<script src="{{ resource }}/cbi.js?v=2.0.8"></script>
+				<script src="{{ media }}/menu-neon.js?v=2.0.8"></script>
+				<title><%=striptags( (boardinfo.hostname or "?") .. ( (node and node.title) and ' - ' .. translate(node.title) or '')) %></title>
 		<title>{{ striptags(`${boardinfo.hostname ?? '?'}${dispatched?.title ? ` | ${_(dispatched.title)}` : ''}`) }}</title>
 		{% if (css): %}
 		<style title="text/css">{{ css }}</style>
@@ -64,13 +65,16 @@
 			<a href="{{ dispatcher.build_url('admin/system/admin') }}"><img src="{{ media }}/images/user.png" /></a>
 		</div>
 		<div class="container">
-			<span class="showSide"></span>
-			<a id="logo" href="{{ ctx.authsession ? dispatcher.build_url('admin/status/overview') : '#' }}"><img class="brand-logo" src="{{ media }}/images/brand.png" alt="PeDitX"></a>
-			<span class="brand-text">PeDitX</span>
-			<img src="{{ media }}/images/logo.png" alt="{{ striptags(boardinfo.hostname ?? '?') }}">
-			<span class="status" id="indicators"></span>
-		</div>
-	</header>
+				<span class="showSide"></span>
+				<a id="logo" href="{{ ctx.authsession ? dispatcher.build_url('admin/status/overview') : '#' }}"><img class="brand-logo" src="{{ media }}/images/brand.png" alt="PeDitX"></a>
+				<span class="brand-text">PeDitX</span>
+				<img src="{{ media }}/images/logo.png" alt="{{ striptags(boardinfo.hostname ?? '?') }}">
+				<span class="status" id="indicators"></span>
+				<div class="modemenu-buttons" style="display:none">
+					<ul id="modemenu"></ul>
+				</div>
+			</div>
+		</header>
 
 	<div class="main">
 		<div style="" class="loading"><span><div class="loading-img"></div>{{ _('Collecting data...') }}</span></div>
