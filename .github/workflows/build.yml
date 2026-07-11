@@ -22,19 +22,20 @@ jobs:
     name: Build ${{ matrix.openwrt_version }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
+    matrix:
         include:
           - openwrt_version: '23.05'
-            sdk_url: "https://downloads.openwrt.org/releases/23.05.5/targets/x86/64/openwrt-sdk-23.05.5-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.zst"
+            sdk_url: "https://downloads.openwrt.org/releases/23.05.5/targets/x86/64/openwrt-sdk-23.05.5-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.xz"
             package_format: 'ipk'
+            extract_cmd: "tar -xJf"
           - openwrt_version: '24.10'
             sdk_url: "https://downloads.openwrt.org/releases/24.10.7/targets/x86/64/openwrt-sdk-24.10.7-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst"
             package_format: 'ipk'
+            extract_cmd: "tar --use-compress-program=unzstd -xf"
           - openwrt_version: '25.12'
             sdk_url: "https://downloads.openwrt.org/releases/25.12.5/targets/x86/64/openwrt-sdk-25.12.5-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
             package_format: 'apk'
+            extract_cmd: "tar --use-compress-program=unzstd -xf"
     steps:
       - name: Checkout theme repo
         uses: actions/checkout@v4
@@ -59,13 +60,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential libncurses5-dev gawk git gettext unzip \
-            zlib1g-dev file python3 curl wget zstd ca-certificates
+            zlib1g-dev file python3 curl wget zstd ca-certificates xz-utils
 
       - name: Download OpenWrt SDK
         run: |
           echo "📥 Downloading SDK ${{ matrix.openwrt_version }}..."
-          wget -q "${{ matrix.sdk_url }}" -O sdk_${{ matrix.package_format }}.tar.zst
-          mkdir -p sdk_${{ matrix.package_format }} && tar --use-compress-program=unzstd -xf sdk_${{ matrix.package_format }}.tar.zst -C sdk_${{ matrix.package_format }} --strip-components=1
+          wget -q "${{ matrix.sdk_url }}" -O sdk_${{ matrix.package_format }}.${{ matrix.openwrt_version == '23.05' && 'tar.xz' || 'tar.zst' }}
+          mkdir -p sdk_${{ matrix.package_format }} && ${{ matrix.extract_cmd }} sdk_${{ matrix.package_format }}.${{ matrix.openwrt_version == '23.05' && 'tar.xz' || 'tar.zst' }} -C sdk_${{ matrix.package_format }} --strip-components=1
 
       - name: Build Package
         working-directory: ./sdk_${{ matrix.package_format }}
