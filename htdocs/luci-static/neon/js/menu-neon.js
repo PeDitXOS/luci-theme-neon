@@ -14,6 +14,7 @@ return baseclass.extend({
 		this.renderMainMenu(tree, '');
 
 		// Render tab menu when we have enough dispatch path depth
+		// Also render main menu when dispatchpath is empty (root/admin pages)
 		if (L.env.dispatchpath.length >= 3) {
 			for (var i = 0; i < 3 && node; i++) {
 				node = node.children[L.env.dispatchpath[i]];
