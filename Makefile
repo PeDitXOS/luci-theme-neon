@@ -9,7 +9,7 @@ LUCI_TITLE:=Neon Theme
 LUCI_DEPENDS:=+luci-base +luci-mod-admin-full
 LUCI_PKGARCH:=all
 LUCI_THEMES:=neon
-PKG_VERSION:=2.0.7
+PKG_VERSION:=2.0.8
 PKG_RELEASE:=1
 PKG_MAINTAINER:=PeDitX
 
