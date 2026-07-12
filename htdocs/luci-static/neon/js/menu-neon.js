@@ -4,17 +4,25 @@
 
 return baseclass.extend({
 	__init__() {
-		ui.menu.load().then((tree) => this.render(tree));
+		ui.menu.load().then((tree) => {
+			console.log('menu-neon: ui.menu.load resolved, tree:', tree);
+			console.log('menu-neon: tree.children:', tree.children);
+			this.render(tree);
+		}).catch((err) => {
+			console.error('menu-neon load error:', err);
+		});
 	},
 
 	render(tree) {
+		console.log('menu-neon render called, tree:', tree);
+		console.log('menu-neon tree.children keys:', tree.children ? Object.keys(tree.children) : 'NO CHILDREN');
 		let node = tree;
 		let url = '';
 
 		this.renderMainMenu(tree, '');
+		this.renderModeMenu(tree);
 
 		// Render tab menu when we have enough dispatch path depth
-		// Also render main menu when dispatchpath is empty (root/admin pages)
 		if (L.env.dispatchpath.length >= 3) {
 			for (var i = 0; i < 3 && node; i++) {
 				node = node.children[L.env.dispatchpath[i]];
@@ -80,10 +88,23 @@ return baseclass.extend({
 		ev.stopPropagation();
 	},
 
+	getMenuChildren(tree) {
+		const children = [];
+		if (!tree || !tree.children) return children;
+		for (const k in tree.children) {
+			if (!tree.children.hasOwnProperty(k)) continue;
+			if (!tree.children[k].hasOwnProperty('title')) continue;
+			let subnode = Object.assign({}, tree.children[k], { name: k });
+			children.push(subnode);
+		}
+		children.sort((a, b) => (a.order ?? 1000) - (b.order ?? 1000));
+		return children;
+	},
+
 	renderMainMenu(tree, url, level) {
 		const l = (level || 0) + 1;
 		const ul = E('ul', { 'class': level ? 'slide-menu' : 'nav' });
-		const children = ui.menu.getChildren(tree);
+		const children = this.getMenuChildren(tree);
 
 		if (children.length == 0 || l > 2)
 			return E([]);
@@ -115,11 +136,38 @@ return baseclass.extend({
 		return ul;
 	},
 
+	renderModeMenu(tree) {
+		const ul = document.querySelector("#modemenu");
+		if (!ul) return;
+		const children = this.getMenuChildren(tree);
+		for (var i = 0; i < children.length; i++) {
+			const isActive = L.env.requestpath.length
+				? children[i].name == L.env.requestpath[0]
+				: i == 0;
+			ul.appendChild(
+				E("li", {}, [
+					E(
+						"a",
+						{
+							href: L.url(children[i].name),
+							class: isActive ? "active" : null,
+						},
+						[_(children[i].title)]
+					),
+				])
+			);
+			if (isActive) this.renderMainMenu(children[i], children[i].name);
+			if (i > 0 && i < children.length)
+				ul.appendChild(E("li", { class: "divider" }, [E("span")]));
+		}
+		if (children.length > 1) ul.parentElement.style.display = "";
+	},
+
 	renderTabMenu(tree, url, level) {
 		const container = document.querySelector('#tabmenu');
 		const l = (level || 0) + 1;
 		const ul = E('ul', { 'class': 'tabs' });
-		const children = ui.menu.getChildren(tree);
+		const children = this.getMenuChildren(tree);
 		let activeNode = null;
 
 		if (children.length == 0)
@@ -136,7 +184,8 @@ return baseclass.extend({
 				]),
 			]));
 
-			if (isActive) activeNode = child;
+			if (isActive)
+				activeNode = child;
 		});
 
 		if (ul.children.length == 0)

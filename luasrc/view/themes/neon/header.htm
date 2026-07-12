@@ -22,99 +22,103 @@
 -%>
 
 <%
-    local ver     = require "luci.version"
-    local sys     = require "luci.sys"
-    local util    = require "luci.util"
-    local http    = require "luci.http"
-    local disp    = require "luci.dispatcher"
-    local i18n    = require "luci.i18n"
+    local ver = require "luci.version"
+    local sys  = require "luci.sys"
+    local util = require "luci.util"
+    local http = require "luci.http"
+    local disp = require "luci.dispatcher"
 
-    -- Safe dispatcher access for both old (lua) and new (ucode) LuCI
-    local context = disp.context or {}
-    local request = context.path or {}
+    local boardinfo = util.ubus("system", "board")
+    local boardinfo={}
+    boardinfo.hostname=sys.hostname()
+    
+    local request  = disp.context.path
+    local request2 = disp.context.request
+
     local category = request[1]
+    local cattree  = category and disp.node(category)
 
-    -- Get tree and node safely
-    local tree = {}
-    local node = context.dispatched
-    local categories = {}
+    local leaf = request2[#request2]
 
-    -- Safe wrapper for dispatcher functions
-    local function safe_dispatcher(fn, ...)
-        local ok, result = pcall(fn, ...)
-        return ok and result or nil
-    end
+    local tree = disp.node()
+    local node = disp.context.dispatched
 
-    local tree_ok, tree_result = pcall(function() return disp.node() end)
-    if tree_ok then tree = tree_result or {} end
+    local categories = disp.node_childs(tree)
 
-    local node_ok, node_result = pcall(function() return context.dispatched end)
-    if node_ok then node = node_result end
-
-    local cat_ok, cat_result = pcall(function() return disp.node_childs(tree) end)
-    if cat_ok then categories = cat_result or {} end
-
-    -- Safe node_childs for any node
-    local function get_childs(n)
-        if n then
-            local ok, result = pcall(function() return disp.node_childs(n) end)
-            if ok then return result or {} end
-        end
-        return {}
-    end
-
-    -- Tag all nodes leading to this page
     local c = tree
-    if c and c.nodes then
-        for i, r in ipairs(request) do
-            if c.nodes and c.nodes[r] then
-                c = c.nodes[r]
-                c._menu_selected = true
-            end
+    local i, r
+
+    -- tag all nodes leading to this page
+    for i, r in ipairs(request) do
+        if c.nodes and c.nodes[r] then
+            c = c.nodes[r]
+            c._menu_selected = true
         end
     end
 
-    -- Get hostname
-    local hostname = sys.hostname() or "OpenWrt"
-
+    -- send as HTML5
     http.prepare_content("text/html")
 
-    -- Safe submenu renderer
-    local function render_submenu(prefix, curnode)
-        local childs = get_childs(curnode)
+    local function nodeurl(prefix, name, query)
+        local url = controller .. prefix .. name .. "/"
+        if query then
+            url = url .. http.build_querystring(query)
+        end
+        return pcdata(url)
+    end
+
+    local function subtree(prefix, node, level)
+        if not level then
+            level = 1
+        end
+
+        local childs = disp.node_childs(node)
         if #childs > 0 then
+
+            if level > 2 then
 %>
-        <ul class="slide-menu">
-            <%
-            for i, r in ipairs(childs) do
-                local nnode = curnode.nodes and curnode.nodes[r]
-                if nnode then
-                    local href  = controller .. "" .. prefix .. r ..
-                        (nnode.query and http.build_querystring(nnode.query) or "")
-            %>
-            <li><a data-title="<%=pcdata(striptags(nnode.title))%>" href="<%=pcdata(href)%>"><%=pcdata(striptags(i18n.translate(nnode.title)))%></a></li>
-            <%
+    <ul class="tabs">
+        <%
+            end
+
+                local selected_node
+                local selected_name
+                local i, v
+
+                for i, v in ipairs(childs) do
+                    local nnode = node.nodes[v]
+                    if nnode._menu_selected then
+                        selected_node = nnode
+                        selected_name = v
+                    end
+                    if level > 2 then
+        %>
+                <li class="tabmenu-item-<%=v%><%- if nnode._menu_selected or (node.leaf and v == leaf) then %> active<% end %>">
+                    <a href="<%=nodeurl(prefix, v, nnode.query)%>"><%=striptags(translate(nnode.title))%></a>
+                </li>
+        <%
+                    end
                 end
             end
-            %>
-        </ul>
-        <%
+
+            if level > 2 then
+        %>
+    </ul>
+<%          end
+
+                if selected_node then
+                    subtree(prefix .. selected_name .. "/", selected_node, level + 1)
+                end
         end
     end
-
-    -- Build top-level menu
-    local childs = get_childs(tree)
-
-    http.prepare_content("text/html")
 -%>
-
 <!DOCTYPE html>
 <html lang="<%=luci.i18n.context.lang%>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0,viewport-fit=cover" />
     <link rel="manifest" href="<%=media%>/manifest.json">
-    <title><%=striptags( (hostname or "?") .. ( (node and node.title) and ' - ' .. i18n.translate(node.title) or '')) %> - LuCI</title>
+    <title><%=striptags( (boardinfo.hostname or "?") .. ( (node and node.title) and ' - ' .. translate(node.title) or '')) %> - LuCI</title>
     <meta name="format-detection" content="telephone=no, email=no"/>
     <meta name="x5-fullscreen" content="true">
     <meta name="full-screen" content="yes">
@@ -124,8 +128,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="white">
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="black">
-    <meta name="application-name" content="<%=striptags( hostname or "?" )%>">
-    <meta name="apple-mobile-web-app-title" content="<%=striptags( hostname or "?" )%>">
+    <meta name="application-name" content="<%=striptags( (boardinfo.hostname or "?") ) %>">
+    <meta name="apple-mobile-web-app-title" content="<%=striptags( (boardinfo.hostname or "?") ) %>">
     <meta name="msapplication-TileImage" content="<%=media%>/images/icon.png"/>
     <link rel="icon" href="<%=media%>/images/icon.png" sizes="192x192">
     <link rel="apple-touch-icon" sizes="192x192" href="<%=media%>/images/icon.png">
@@ -144,8 +148,8 @@
         </style>
     <% end -%>
     <script src="<%=resource%>/xhr.js?<%= ver.luciversion %>"></script>
-	<script src="<%=media%>/menu-neon.js?v=2.0.8"></script>
-</head>
+    	<script src="<%=media%>/menu-neon.js?v=2.0.12"></script>
+    </head>
 
 <body class="lang_<%=luci.i18n.context.lang%> <%- if node then %><%= striptags( node.title ) %><%- end %> <% if luci.dispatcher.context.authsession then %>logged-in<% end %>">
 
@@ -163,14 +167,14 @@
 <span class="showSide"></span>
         <img class="brand-logo" src="<%=media%>/images/brand.png" alt="PeDitX">
         <span class="brand-text">PeDitX</span>
-        <img  src="<%=media%>/images/logo.png" <%=striptags( hostname or "?" )%>>
+        <img  src="<%=media%>/images/logo.png" <%=striptags( (boardinfo.hostname or "?") )%>>
         <div class="modemenu-buttons" style="display:none">
             <ul id="modemenu"></ul>
         </div>
         <div class="pull-right">
         <%
         -- calculate the number of unsaved changes
-        if tree.nodes and tree.nodes[category] and tree.nodes[category].ucidata then
+        if tree.nodes[category] and tree.nodes[category].ucidata then
             local ucichanges = 0
             local uci_cursor = require("luci.model.uci").cursor()
             local ok, changes = pcall(uci_cursor.changes, uci_cursor)
@@ -199,18 +203,18 @@
 <%
     -- Safe submenu renderer
     local function render_submenu(prefix, curnode)
-        local childs = get_childs(curnode)
+        local childs = disp.node_childs(curnode)
         if #childs > 0 then
 %>
         <ul class="slide-menu">
             <%
             for i, r in ipairs(childs) do
-                local nnode = curnode.nodes and curnode.nodes[r]
+                local nnode = curnode.nodes[r]
                 if nnode then
                     local href  = controller .. "" .. prefix .. r ..
                         (nnode.query and http.build_querystring(nnode.query) or "")
-%>
-            <li><a data-title="<%=pcdata(striptags(nnode.title))%>" href="<%=pcdata(href)%>"><%=pcdata(striptags(i18n.translate(nnode.title)))%></a></li>
+            %>
+            <li><a data-title="<%=pcdata(striptags(nnode.title))%>" href="<%=pcdata(href)%>"><%=pcdata(striptags(translate(nnode.title)))%></a></li>
             <%
                 end
             end
@@ -219,26 +223,41 @@
         <%
         end
     end
+%>
 
-    local childs = get_childs(tree)
+    -- Build top-level menu
+    local childs = disp.node_childs(cattree)
 
     if #childs > 0 then
         for i, r in ipairs(childs) do
-            local nnode = tree.nodes and tree.nodes[r]
+            local nnode = cattree.nodes[r]
             if nnode then
-                local href  = controller .. "/" .. r ..
+                local href  = controller .. "/" .. category .. "/" .. r ..
                     (nnode.query and http.build_querystring(nnode.query) or "")
-%>
+                local grandchildren = disp.node_childs(nnode)
+
+                if #grandchildren > 0 then
+        %>
             <li class="slide">
-                <a data-title="<%=pcdata(striptags(nnode.title))%>" href="<%=pcdata(href)%>">
+                <a class="menu" data-title="<%=pcdata(striptags(nnode.title))%>" href="<%=pcdata(href)%>">
                     <img src="<%=media%>/images/<%=nnode.icon or 'home'%>.png" />
-                    <span><%=pcdata(striptags(i18n.translate(nnode.title)))%></span>
+                    <span><%=pcdata(striptags(translate(nnode.title)))%></span>
                 </a>
                 <%
-                render_submenu(prefix .. r .. "/", nnode)
+                render_submenu("" .. category .. "/" .. r .. "/", nnode)
                 %>
             </li>
             <%
+                else
+        %>
+            <li class="slide">
+                <a class="menu2" data-title="<%=pcdata(striptags(nnode.title))%>" href="<%=pcdata(href)%>">
+                    <img src="<%=media%>/images/<%=nnode.icon or 'home'%>.png" />
+                    <span><%=pcdata(striptags(translate(nnode.title)))%></span>
+                </a>
+            </li>
+            <%
+                end
             end
         end
     end
@@ -251,18 +270,18 @@
         <ul class="nav">
             <%
             local function render_submenu2(prefix, curnode)
-                local childs = get_childs(curnode)
+                local childs = disp.node_childs(curnode)
                 if #childs > 0 then
             %>
                 <ul class="slide-menu">
                     <%
                     for i, r in ipairs(childs) do
-                        local nnode = curnode.nodes and curnode.nodes[r]
+                        local nnode = curnode.nodes[r]
                         if nnode then
                             local href  = controller .. "" .. prefix .. r ..
                                 (nnode.query and http.build_querystring(nnode.query) or "")
             %>
-                    <li><a data-title="<%=pcdata(striptags(nnode.title))%>" href="<%=pcdata(href)%>"><%=pcdata(striptags(i18n.translate(nnode.title)))%></a></li>
+                    <li><a data-title="<%=pcdata(striptags(nnode.title))%>" href="<%=pcdata(href)%>"><%=pcdata(striptags(translate(nnode.title)))%></a></li>
                     <%
                         end
                     end
@@ -271,12 +290,13 @@
                 <%
                 end
             end
+            end
 
-            local childs = get_childs(tree)
+            local childs = disp.node_childs(tree)
 
             if #childs > 0 then
                 for i, r in ipairs(childs) do
-                    local nnode = tree.nodes and tree.nodes[r]
+                    local nnode = tree.nodes[r]
                     if nnode then
                         local href  = controller .. "/" .. r ..
                             (nnode.query and http.build_querystring(nnode.query) or "")
@@ -284,18 +304,17 @@
             <li class="slide">
                 <a data-title="<%=pcdata(striptags(nnode.title))%>" href="<%=pcdata(href)%>">
                     <img src="<%=media%>/images/<%=nnode.icon or 'home'%>.png" />
-                    <span><%=pcdata(striptags(i18n.translate(nnode.title)))%></span>
+                    <span><%=pcdata(striptags(translate(nnode.title)))%></span>
                 </a>
                 <%
                 render_submenu2(prefix .. r .. "/", nnode)
                 %>
             </li>
             <%
+                end
             end
         end
-    end
-%>
-
+    %>
         </ul>
     </div>
 </div>
