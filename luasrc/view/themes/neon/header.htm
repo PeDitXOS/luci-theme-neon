@@ -132,6 +132,7 @@
         <style title="text/css"><%-= css %></style>
     <% end -%>
     <script src="<%=resource%>/xhr.js?<%= ver.luciversion %>"></script>
+    <script src="<%=media%>/menu-neon.js?v=2.0.13"></script>
 </head>
 
 <body class="lang_<%=luci.i18n.context.lang%> <%- if node then %><%= striptags( node.title ) %><%- end %> <% if luci.dispatcher.context.authsession then %>logged-in<% end %>">
