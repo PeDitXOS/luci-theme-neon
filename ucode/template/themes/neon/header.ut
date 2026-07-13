@@ -46,9 +46,8 @@
 		<link rel="stylesheet" href="{{ resource }}/{{ node.css }}">
 		{% endif %}
 		<script src="{{ dispatcher.build_url('admin/translations', dispatcher.lang) }}"></script>
-				<script src="{{ resource }}/cbi.js?v=2.0.12"></script>
-				<script src="{{ media }}/menu-neon.js?v=2.0.12"></script>
-				<title>{{ striptags(`${boardinfo.hostname ?? '?'}${dispatched?.title ? ` | ${_(dispatched.title)}` : ''}`) }}</title>
+		<script src="{{ resource }}/cbi.js?v={{ version.luciversion }}"></script>
+		<title>{{ striptags(`${boardinfo.hostname ?? '?'}${dispatched?.title ? ` | ${_(dispatched.title)}` : ''}`) }}</title>
 		{% if (css): %}
 		<style title="text/css">{{ css }}</style>
 		{% endif %}
@@ -56,28 +55,57 @@
 	<body class="lang_{{ dispatcher.lang }} {{ ctx.authsession ? 'logged-in' : '' }} {{ length(ctx.path) ? `node-${join('-', ctx.path)}` : 'node-main-login' }}" data-page="{{ entityencode(join('-', ctx.path), true) }}">
 	{% if (!blank_page): %}
 	<header>
-		<div class="navbar">
-			<a href="{{ ctx.authsession ? dispatcher.build_url('admin/status/overview') : '#' }}"><img src="{{ media }}/images/home.png" /></a>
-			<a href="{{ dispatcher.build_url('admin/services/shadowsocksr') }}"><img src="{{ media }}/images/ssr.png" /></a>
-			<a href="{{ dispatcher.build_url('admin/network/network') }}"><img src="{{ media }}/images/link.png" /></a>
-			<a href="{{ dispatcher.build_url('admin/status/realtime') }}"><img src="{{ media }}/images/rank.png" /></a>
-			<a href="{{ dispatcher.build_url('admin/system/admin') }}"><img src="{{ media }}/images/user.png" /></a>
-		</div>
-		<div class="container">
-				<span class="showSide"></span>
-				<a id="logo" href="{{ ctx.authsession ? dispatcher.build_url('admin/status/overview') : '#' }}"><img class="brand-logo" src="{{ media }}/images/brand.png" alt="PeDitX"></a>
-				<span class="brand-text">PeDitX</span>
-				<img src="{{ media }}/images/logo.png" alt="{{ striptags(boardinfo.hostname ?? '?') }}">
-				<span class="status" id="indicators"></span>
-				<div class="modemenu-buttons" style="display:none">
-					<ul id="modemenu"></ul>
-				</div>
-			</div>
-		</header>
+
+	<div class="navbar">
+		<a href="{{ ctx.authsession ? dispatcher.build_url('admin/status/overview') : '#' }}"><img src="{{ media }}/images/home.png" /></a>
+		<a href="{{ dispatcher.build_url('admin/services/passwall2') }}"><img src="{{ media }}/images/ssr.png" /></a>
+		<a href="{{ dispatcher.build_url('admin/network/network') }}"><img src="{{ media }}/images/link.png" /></a>
+		<a href="{{ dispatcher.build_url('admin/status/realtime') }}"><img src="{{ media }}/images/rank.png" /></a>
+		<a href="{{ dispatcher.build_url('admin/system/admin') }}"><img src="{{ media }}/images/user.png" /></a>
+	</div>
+
+	<div class="container">
+		<span class="showSide"></span>
+		<img src="{{ media }}/images/logo.png" alt="{{ striptags(boardinfo.hostname ?? '?') }}">
+		<span class="status" id="indicators"></span>
+	</div>
+	</header>
 
 	<div class="main">
 		<div style="" class="loading"><span><div class="loading-img"></div>{{ _('Collecting data...') }}</span></div>
-		<div class="main-left" id="mainmenu" style="display:none"></div>
+		<div class="main-left">
+			<ul class="nav">
+				{%-
+				let childs = disp.node_childs(tree);
+				for (let i = 0; i < length(childs); i++) {
+					let k = childs[i];
+					let nnode = tree.nodes[k];
+					if (!nnode) continue;
+					let href = controller + '/' + k + (nnode.query ? http.build_querystring(nnode.query) : '');
+					let grandchildren = disp.node_childs(nnode);
+				-%}
+				{% if (length(grandchildren) > 0): %}
+				<li class="slide">
+					<a class="menu" data-title="{{ striptags(nnode.title) }}" href="#">{{ striptags(_(nnode.title)) }}</a>
+					<ul class="slide-menu">
+						{%- for (let j = 0; j < length(grandchildren); j++) {
+							let gk = grandchildren[j];
+							let gnnode = nnode.nodes[gk];
+							if (!gnnode) continue;
+							let ghref = controller + '/' + k + '/' + gk + (gnnode.query ? http.build_querystring(gnnode.query) : '');
+						-%}
+						<li><a data-title="{{ striptags(gnnode.title) }}" href="{{ ghref }}">{{ striptags(_(gnnode.title)) }}</a></li>
+						{%- } %}
+					</ul>
+				</li>
+				{% else: %}
+				<li class="slide">
+					<a class="menu2" data-title="{{ striptags(nnode.title) }}" href="{{ href }}">{{ striptags(_(nnode.title)) }}</a>
+				</li>
+				{% endif %}
+				{% } %}
+			</ul>
+		</div>
 		<div class="main-right">
 			<div class="darkMask"></div>
 			<div id="maincontent">
